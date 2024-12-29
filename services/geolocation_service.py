@@ -5,6 +5,7 @@ class GeolocationService:
     def get_location_description(lat, lon):
         """
         Get a cleaned textual description of the location based on GPS coordinates.
+        ex, del URL: https://nominatim.openstreetmap.org/reverse?lat=38.384349&lon=-0.513775&format=json&addressdetails=1
         """
         try:
             # Use OpenStreetMap's Nominatim API
