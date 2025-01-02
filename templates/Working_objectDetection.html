@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Object Detection</title>
+    <!-- Include Socket.IO Library -->
+    <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
+    <style>
+        video {
+            display: block;
+            margin: 0 auto;
+            border: 2px solid black;
+        }
+        h1 {
+            text-align: center;
+        }
+        #output {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-Time Object Detection</h1>
+    <video id="video" autoplay></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <div id="output"></div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const output = document.getElementById('output');
+        const ctx = canvas.getContext('2d');
+
+        // Initialize Socket.IO connection
+        const socket = io('http://localhost:5000'); // Ensure this matches your backend's WebSocket URL
+
+        // Socket.IO events
+        socket.on('connect', () => {
+            console.log('Socket.IO connection established');
+            output.innerHTML = '<p style="color: green;">Socket.IO connection established</p>';
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Socket.IO connection lost');
+            output.innerHTML = '<p style="color: red;">Socket.IO connection lost. Reconnecting...</p>';
+        });
+
+        socket.on('detection_result', data => {
+            console.log('Detection result received:', data);
+            if (data.error) {
+                output.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+            } else if (data.detections && data.detections.length > 0) {
+                output.innerHTML = `
+                    <h3>Detections:</h3>
+                    <ul>
+                        ${data.detections.map(d => `<li>${d.label} (${(d.confidence * 100).toFixed(2)}%)</li>`).join('')}
+                    </ul>
+                `;
+            } else {
+                output.innerHTML = '<p>No objects detected.</p>';
+            }
+        });
+
+        // Access the webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                video.play();
+            })
+            .catch(err => {
+                console.error('Error accessing webcam:', err);
+                output.innerHTML = `<p style="color: red;">Error accessing webcam: ${err.message}</p>`;
+            });
+
+        // Send frames to the backend every 100ms
+        setInterval(() => {
+            if (socket.connected) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                const frame = canvas.toDataURL('image/jpeg').split(',')[1]; // Get base64 without metadata
+                socket.emit('object_detection', { image: frame });
+            } else {
+                console.error('Socket.IO is not connected.');
+            }
+        }, 100);
+    </script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Object Detection</title>
+    <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
+    <style>
+        #video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-Time Object Detection</h1>
+    <video id="video" autoplay></video>
+    <canvas id="canvas"></canvas>
+    <div id="output"></div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const output = document.getElementById('output');
+        const ctx = canvas.getContext('2d');
+
+        // Initialize Socket.IO connection
+        const socket = io.connect('http://localhost:5000');
+
+        // WebSocket Events
+        socket.on('connect', () => {
+            console.log('Socket.IO connection established');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Socket.IO connection lost');
+            output.textContent = 'WebSocket connection lost. Trying to reconnect...';
+        });
+
+        socket.on('detection_result', data => {
+            if (data.error) {
+                output.textContent = `Error: ${data.error}`;
+            } else if (data.detections && Array.isArray(data.detections)) {
+                // Clear the canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                // Draw bounding boxes and display labels
+                data.detections.forEach(detection => {
+                    const { box, label, confidence } = detection;
+                    const [x1, y1, x2, y2] = box;
+
+                    // Draw bounding box
+                    ctx.strokeStyle = "red";
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+                    // Draw label and confidence
+                    ctx.fillStyle = "red";
+                    ctx.font = "16px Arial";
+                    ctx.fillText(`${label} (${(confidence * 100).toFixed(2)}%)`, x1, y1 - 10);
+                });
+            } else {
+                output.textContent = "No detections found.";
+            }
+        });
+
+        // Access the webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                video.play();
+            })
+            .catch(err => console.error('Error accessing webcam:', err));
+
+        // Send frames to the backend every 100ms
+        setInterval(() => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const frame = canvas.toDataURL('image/jpeg').split(',')[1]; // Get base64 without metadata
+            socket.emit('object_detection', { image: frame });
+        }, 100);
+    </script>
+</body>
+</html>
