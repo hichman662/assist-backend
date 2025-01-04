@@ -1,11 +1,16 @@
-flask
+mediapipe
+protobuf==3.20.2
+paddlepaddle==2.6.2
+paddleocr==2.6.0
+flask==2.3.3
+flask-socketio==5.3.2
 flask-cors
 flask-restx
 transformers
 torch
-paddlepaddle  # For CPU-only systems
-# Uncomment the next line if you are using a GPU
-# paddlepaddle-gpu==2.4.2.post117 -f https://www.paddlepaddle.org.cn/whl/stable.html
-paddleocr
-imgaug
-numpy
+imgaug==0.4.0  # Pin imgaug to a version compatible with older NumPy
+numpy==1.24.4  # Pin to an older version compatible with imgaug
+scikit-learn
+ultralytics
+joblib
+

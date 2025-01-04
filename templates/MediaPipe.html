@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Language to Sentence</title>
+    <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Sign Language to Sentence</h1>
+    <video id="video" autoplay></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <div id="output"></div>
+    <div id="sentence"></div>
+    <div id="annotated-frame"></div>
+    <button id="clear-button">Clear Sentence</button>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const output = document.getElementById('output');
+        const sentence = document.getElementById('sentence');
+        const annotatedFrame = document.getElementById('annotated-frame');
+        const clearButton = document.getElementById('clear-button');
+        const ctx = canvas.getContext('2d');
+
+        // Initialize Socket.IO connection
+        const socket = io('http://localhost:5000');
+
+        socket.on('connect', () => {
+            console.log('WebSocket connected');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('WebSocket disconnected');
+        });
+
+        socket.on('translation_result', (data) => {
+            if (data.error) {
+                output.textContent = `Error: ${data.error}`;
+            } else {
+                output.textContent = `Detected Gesture: ${data.translation}`;
+                sentence.textContent = `Current Sentence: ${data.sentence}`;
+                if (data.annotated_frame) {
+                    const img = new Image();
+                    img.src = `data:image/jpeg;base64,${data.annotated_frame}`;
+                    annotatedFrame.innerHTML = ''; // Clear previous frame
+                    annotatedFrame.appendChild(img);
+                }
+            }
+        });
+
+        // Access webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                video.play();
+            })
+            .catch(err => console.error('Error accessing webcam:', err));
+
+        // Send frames to backend every 200ms
+        setInterval(() => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const frame = canvas.toDataURL('image/jpeg').split(',')[1]; // Base64
+            socket.emit('sign_language', { image: frame });
+        }, 200);
+
+        // Clear the sentence when the button is clicked
+        clearButton.addEventListener('click', () => {
+            socket.emit('clear_sentence'); // Inform the backend to reset the sentence
+            sentence.textContent = `Current Sentence: `; // Clear the frontend display
+        });
+    </script>
+</body>
+</html>
