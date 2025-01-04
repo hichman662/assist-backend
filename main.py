@@ -3,6 +3,7 @@ multiprocessing.set_start_method("spawn", force=True)
 import sys
 import os
 from flask_socketio import SocketIO
+from flask_cors import CORS
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -26,6 +27,9 @@ from app.websocket_handlers.sign_language_ws import handle_sign_language, handle
 # Create Flask app
 app = create_app()
 
+# Enable CORS
+CORS(app, resources={r"/*": {"origins": "*"}})
+
 # Initialize SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*")
 
@@ -46,6 +50,7 @@ api.add_namespace(geolocation_ns, path="/api/v1/geolocation")
 socketio.on_event("object_detection", handle_object_detection)
 socketio.on_event("sign_language", handle_sign_language)
 socketio.on_event("clear_sentence", handle_clear_sentence)
+
 
 if __name__ == "__main__":
     

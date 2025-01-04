@@ -1,5 +1,3 @@
-# app/data/color_names.py
-
 def hex_to_rgb(hex_color):
     """
     Convert a hexadecimal color string to an RGB tuple.
@@ -28,5 +26,4 @@ CSS3_NAMES_TO_HEX = {
     "purple": "#800080",
     "teal": "#008080",
     "navy": "#000080",
-    # Add more valid colors as needed
 }

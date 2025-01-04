@@ -1,54 +1,44 @@
-# app/services/color_detection_service.py
-
-from PIL import Image
-from sklearn.cluster import KMeans
+import cv2
 import numpy as np
+import base64  # Importing base64
+from io import BytesIO
+from PIL import Image
 from app.data.color_names import CSS3_NAMES_TO_HEX, hex_to_rgb
 
-class ColorRecognitionService:
-    @staticmethod
-    def closest_color(requested_color):
-        """
-        Find the closest color name for an RGB value.
-        """
-        min_colors = {}
-        for hex_code, name in CSS3_NAMES_TO_HEX.items():
-            try:
-                r_c, g_c, b_c = hex_to_rgb(hex_code)
-                rd = (r_c - requested_color[0]) ** 2
-                gd = (g_c - requested_color[1]) ** 2
-                bd = (b_c - requested_color[2]) ** 2
-                min_colors[(rd + gd + bd)] = name
-            except ValueError as e:
-                print(f"Skipping invalid hex color {hex_code}: {name}. Error: {e}")
-        if not min_colors:
-            return "Unknown"
-        return min_colors[min(min_colors.keys())]
+def decode_image(base64_string):
+    """
+    Decode a base64-encoded image into an OpenCV image.
+    """
+    try:
+        image_data = base64.b64decode(base64_string)
+        image = Image.open(BytesIO(image_data))
+        return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    except Exception as e:
+        print(f"Error decoding image: {e}")
+        return None
 
-    @staticmethod
-    def extract_dominant_colors(image_path: str, num_colors: int = 5):
-        """
-        Extract dominant colors using K-Means clustering for improved results.
+def extract_colors(image, num_colors=5):
+    """
+    Extract dominant colors from an image using k-means clustering.
+    """
+    try:
+        # Resize the image for faster processing
+        image = cv2.resize(image, (150, 150), interpolation=cv2.INTER_AREA)
+        data = image.reshape((-1, 3))
+        data = np.float32(data)
 
-        Args:
-            image_path (str): Path to the image file.
-            num_colors (int): Number of dominant colors to return.
+        # K-means clustering
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+        _, labels, centers = cv2.kmeans(data, num_colors, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
 
-        Returns:
-            list: List of dominant colors with their names and RGB values.
-        """
-        image = Image.open(image_path).convert("RGB")
-        image = image.resize((200, 200))  # Resize for efficiency
-        pixels = np.array(image).reshape((-1, 3))
-
-        # Apply K-Means clustering
-        kmeans = KMeans(n_clusters=num_colors, random_state=0).fit(pixels)
-        centers = kmeans.cluster_centers_
-
+        # Map the colors to CSS names
         dominant_colors = []
         for center in centers:
             rgb = tuple(map(int, center))
-            color_name = ColorRecognitionService.closest_color(rgb)
-            dominant_colors.append({"name": color_name, "rgb": list(rgb)})
-
+            hex_color = '#{:02x}{:02x}{:02x}'.format(*rgb)
+            closest_color = min(CSS3_NAMES_TO_HEX.keys(), key=lambda c: np.linalg.norm(np.array(hex_to_rgb(CSS3_NAMES_TO_HEX[c])) - np.array(rgb)))
+            dominant_colors.append({"rgb": rgb, "hex": hex_color, "name": closest_color})
         return dominant_colors
+    except Exception as e:
+        print(f"Error extracting dominant colors: {e}")
+        return []

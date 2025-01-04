@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Color Detection</title>
+  <style>
+    #video {
+      width: 100%;
+      max-width: 400px;
+    }
+    #snapshot {
+      margin-top: 20px;
+      border: 1px solid black;
+    }
+    .color-box {
+      display: inline-block;
+      margin: 5px;
+      width: 50px;
+      height: 50px;
+      border: 1px solid #000;
+    }
+    .color-container {
+      display: inline-block;
+      text-align: center;
+      margin: 5px;
+    }
+    .color-name {
+      font-size: 12px;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Color Detection with REST API</h1>
+  <video id="video" autoplay></video>
+  <button id="capture">Capture Image</button>
+  <canvas id="snapshot" width="400" height="300"></canvas>
+  <div id="results"></div>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('snapshot');
+    const captureButton = document.getElementById('capture');
+    const resultsDiv = document.getElementById('results');
+    const ctx = canvas.getContext('2d');
+
+    async function startWebcam() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+    }
+
+    captureButton.addEventListener('click', async () => {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(async (blob) => {
+        const formData = new FormData();
+        formData.append('image', blob, 'capture.jpg');
+        try {
+          const response = await fetch('http://127.0.0.1:5000/api/v1/color-detection/', {
+            method: 'POST',
+            body: formData,
+          });
+          if (!response.ok) throw new Error('Failed to fetch colors');
+          const data = await response.json();
+          resultsDiv.innerHTML = '<h2>Detected Colors:</h2>';
+          data.colors.forEach(color => {
+            // Create container for color box and name
+            const container = document.createElement('div');
+            container.className = 'color-container';
+
+            // Create color box
+            const colorBox = document.createElement('div');
+            colorBox.className = 'color-box';
+            colorBox.style.backgroundColor = color.hex;
+
+            // Create color name
+            const colorName = document.createElement('div');
+            colorName.className = 'color-name';
+            colorName.textContent = `${color.name} (${color.hex})`;
+
+            // Append color box and name to container
+            container.appendChild(colorBox);
+            container.appendChild(colorName);
+
+            // Append container to results
+            resultsDiv.appendChild(container);
+          });
+        } catch (error) {
+          resultsDiv.innerHTML = `<p style="color: red;">${error.message}</p>`;
+        }
+      }, 'image/jpeg');
+    });
+
+    startWebcam();
+  </script>
+</body>
+</html>

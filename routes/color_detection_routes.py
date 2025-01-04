@@ -1,15 +1,10 @@
 from flask_restx import Namespace, Resource
 from flask import request
-from app.services.color_detection_service import ColorRecognitionService
-import os
-import uuid
+import base64  # Importing base64 module
+from app.services.color_detection_service import decode_image, extract_colors
 
 # Initialize namespace
-color_detection_ns = Namespace("color_detection", description="API for Color Detection")
-color_service = ColorRecognitionService()
-
-UPLOAD_DIR = "uploads"  # Directory to save uploaded images
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+color_detection_ns = Namespace("color-detection", description="API for Color Detection")
 
 @color_detection_ns.route("/")
 class ColorDetection(Resource):
@@ -23,19 +18,18 @@ class ColorDetection(Resource):
             if not image_file:
                 return {"error": "No image file provided"}, 400
 
-            # Save the image temporarily
-            file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{image_file.filename}")
-            with open(file_path, "wb") as f:
-                f.write(image_file.read())
+            # Decode the image
+            image_data = image_file.read()
+            image = decode_image(base64.b64encode(image_data).decode("utf-8"))
+            if image is None:
+                return {"error": "Failed to decode the image"}, 400
 
             # Extract dominant colors
             num_colors = int(request.form.get("num_colors", 5))
-            dominant_colors = color_service.extract_dominant_colors(file_path, num_colors)
+            dominant_colors = extract_colors(image, num_colors)
 
-            # Clean up the uploaded file
-            os.remove(file_path)
-
-            return {"dominant_colors": dominant_colors}, 200
+            # Return colors with names and RGB values
+            return {"colors": dominant_colors}, 200
 
         except Exception as e:
             print(f"Error in processing image: {e}")
