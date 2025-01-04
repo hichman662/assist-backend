@@ -21,7 +21,7 @@ from app.routes.geolocation_routes import geolocation_ns
 
 # Import WebSocket handlers
 from app.websocket_handlers.object_detection_ws import handle_object_detection
-from app.websocket_handlers.sign_language_ws import handle_sign_language
+from app.websocket_handlers.sign_language_ws import handle_sign_language, handle_clear_sentence
 
 # Create Flask app
 app = create_app()
@@ -45,6 +45,7 @@ api.add_namespace(geolocation_ns, path="/api/v1/geolocation")
 # WebSocket handler registration
 socketio.on_event("object_detection", handle_object_detection)
 socketio.on_event("sign_language", handle_sign_language)
+socketio.on_event("clear_sentence", handle_clear_sentence)
 
 if __name__ == "__main__":
     

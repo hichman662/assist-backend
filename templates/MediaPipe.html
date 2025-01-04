@@ -3,19 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Language to Text</title>
+    <title>Sign Language to Sentence</title>
     <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
 </head>
 <body>
-    <h1>Sign Language to Text</h1>
+    <h1>Sign Language to Sentence</h1>
     <video id="video" autoplay></video>
     <canvas id="canvas" style="display:none;"></canvas>
     <div id="output"></div>
+    <div id="sentence"></div>
+    <div id="annotated-frame"></div>
+    <button id="clear-button">Clear Sentence</button>
 
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const output = document.getElementById('output');
+        const sentence = document.getElementById('sentence');
+        const annotatedFrame = document.getElementById('annotated-frame');
+        const clearButton = document.getElementById('clear-button');
         const ctx = canvas.getContext('2d');
 
         // Initialize Socket.IO connection
@@ -33,7 +39,14 @@
             if (data.error) {
                 output.textContent = `Error: ${data.error}`;
             } else {
-                output.textContent = `Translation: ${data.translation}`;
+                output.textContent = `Detected Gesture: ${data.translation}`;
+                sentence.textContent = `Current Sentence: ${data.sentence}`;
+                if (data.annotated_frame) {
+                    const img = new Image();
+                    img.src = `data:image/jpeg;base64,${data.annotated_frame}`;
+                    annotatedFrame.innerHTML = ''; // Clear previous frame
+                    annotatedFrame.appendChild(img);
+                }
             }
         });
 
@@ -53,6 +66,12 @@
             const frame = canvas.toDataURL('image/jpeg').split(',')[1]; // Base64
             socket.emit('sign_language', { image: frame });
         }, 200);
+
+        // Clear the sentence when the button is clicked
+        clearButton.addEventListener('click', () => {
+            socket.emit('clear_sentence'); // Inform the backend to reset the sentence
+            sentence.textContent = `Current Sentence: `; // Clear the frontend display
+        });
     </script>
 </body>
 </html>

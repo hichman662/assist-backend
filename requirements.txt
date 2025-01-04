@@ -12,3 +12,5 @@ imgaug==0.4.0  # Pin imgaug to a version compatible with older NumPy
 numpy==1.24.4  # Pin to an older version compatible with imgaug
 scikit-learn
 ultralytics
+joblib
+

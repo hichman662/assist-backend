@@ -14,7 +14,14 @@ def handle_sign_language(data):
             return
 
         # Process the frame to translate sign language
-        translation = SignLanguageService.translate(image_base64)
-        emit("translation_result", {"translation": translation})
+        result = SignLanguageService.translate(image_base64)
+        emit("translation_result", result)
     except Exception as e:
         emit("translation_result", {"error": str(e)})
+
+def handle_clear_sentence():
+    """
+    WebSocket handler to clear the current sentence.
+    """
+    SignLanguageService.current_sentence = ""  # Reset the accumulated sentence
+    emit("translation_result", {"translation": "", "sentence": ""})
