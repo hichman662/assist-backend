@@ -25,14 +25,23 @@ class ObjectDetectionService:
             # Perform object detection
             results = ObjectDetectionService.model(img)
 
-            # Parse detection results
+            # Define a constant for the reference object size (in pixels)
+            reference_width = 100  # Example width in pixels
+            reference_distance = 1.0  # Example distance in meters
+
             detections = []
             for result in results[0].boxes.data.tolist():
                 x1, y1, x2, y2, conf, class_id = result
+                width = x2 - x1
+
+                # Estimate distance
+                distance = (reference_width / width) * reference_distance
+
                 detections.append({
                     "label": ObjectDetectionService.model.names[int(class_id)],
                     "confidence": conf,  # Confidence as float
-                    "box": [int(x1), int(y1), int(x2), int(y2)]
+                    "box": [int(x1), int(y1), int(x2), int(y2)],
+                    "distance": distance  # Include the calculated distance
                 })
 
             # Return the response as a dictionary
