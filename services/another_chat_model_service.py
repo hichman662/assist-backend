@@ -1,8 +1,7 @@
 import requests
+from app.config.config import API_URL, API_TOKEN
 
-# Hugging Face API Configuration
-API_URL = "https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-2.7B"  # Replace with your chosen free model
-API_TOKEN = "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"  # Your provided token
+
 HEADERS = {"Authorization": f"Bearer {API_TOKEN}"}
 
 def generate_free_model_response(prompt, max_new_tokens=150, temperature=0.7):
