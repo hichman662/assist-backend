@@ -1,3 +1,5 @@
+import numpy as np
+np.int = int
 import multiprocessing
 multiprocessing.set_start_method("spawn", force=True)
 import sys
