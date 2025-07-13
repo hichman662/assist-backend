@@ -1,69 +1,67 @@
-import logging
-from paddleocr import PaddleOCR
-from PIL import Image, ImageEnhance, ImageFilter
-import io
 import os
+import uuid
+import io
+import cv2
+import numpy as np
+import traceback
+from PIL import Image
+import pytesseract
+from collections import defaultdict
 
-# Suppress PaddleOCR debug logs
-logging.getLogger("ppocr").setLevel(logging.WARNING)
+# Set Tesseract path for Windows
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
-# Initialize PaddleOCR
-ocr = PaddleOCR(use_angle_cls=True, lang='en')  # Add 'ch' for Chinese or other languages if needed
-print("PaddleOCR Handwriting OCR model loaded successfully!")
+def upscale_image(image, scale=2):
+    """Upscale image to improve OCR accuracy."""
+    width, height = image.size
+    return image.resize((width * scale, height * scale), Image.LANCZOS)
 
-def preprocess_image(image):
-    """
-    Enhance the image for better OCR results.
-    
-    Args:
-        image (PIL.Image.Image): The input image.
+def preprocess_image_for_ocr(image):
+    """Convert to grayscale, blur, and apply adaptive thresholding."""
+    cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray, (3, 3), 0)
+    thresh = cv2.adaptiveThreshold(
+        blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV, 31, 15
+    )
+    kernel = np.ones((1, 1), np.uint8)
+    closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+    final = cv2.bitwise_not(closed)
+    return final
 
-    Returns:
-        PIL.Image.Image: The enhanced image.
-    """
-    image = image.convert("L")  # Convert to grayscale
-    image = image.filter(ImageFilter.SHARPEN)  # Sharpen the image
-    enhancer = ImageEnhance.Contrast(image)  # Enhance contrast
-    image = enhancer.enhance(2.0)
-    return image.convert("RGB")  # Convert back to RGB
-
-def process_text_image(image_file):
-    """
-    Process the uploaded image and extract handwritten text using PaddleOCR.
-
-    Args:
-        image_file: The uploaded image file.
-    
-    Returns:
-        tuple: A response dictionary and an HTTP status code.
-    """
+def process_text_image(image_file, ocr_type='ocr'):
     try:
-        # Open the image file
-        image = Image.open(io.BytesIO(image_file.read()))
-        print(f"Original Image size: {image.size}")
+        temp_dir = os.path.join(os.getcwd(), "temp_images")
+        os.makedirs(temp_dir, exist_ok=True)
 
-        # Preprocess the image
-        image = preprocess_image(image)
-        print(f"Preprocessed Image size: {image.size}")
+        temp_filename = f"{uuid.uuid4().hex}.jpg"
+        temp_path = os.path.join(temp_dir, temp_filename)
 
-        # Save the processed image temporarily (PaddleOCR works on file paths)
-        temp_image_path = "temp_processed_image.jpg"
-        image.save(temp_image_path)
+        image = Image.open(io.BytesIO(image_file.read())).convert("RGB")
+        image = upscale_image(image, scale=2)
+        image.save(temp_path)
 
-        # Perform OCR on the image
-        results = ocr.ocr(temp_image_path, cls=True)
-        os.remove(temp_image_path)  # Clean up the temporary file after processing
+        processed_img = preprocess_image_for_ocr(image)
 
-        # Extract text from OCR results
-        text = " ".join([line[1][0] for line in results[0]])
-        print(f"OCR Result: {text}")
+        data = pytesseract.image_to_data(processed_img, output_type=pytesseract.Output.DICT)
+        lines = defaultdict(list)
 
-        # Validate the OCR result
-        if not text.strip():
-            return {"error": "OCR did not return any text. Ensure the handwriting is legible."}, 400
+        for i in range(len(data['text'])):
+            if int(data['conf'][i]) > 60 and data['text'][i].strip():
+                line_no = data['line_num'][i]
+                lines[line_no].append(data['text'][i])
 
-        return {"text": text.strip()}, 200
+        text_result = '\n'.join([' '.join(words) for _, words in sorted(lines.items())])
+
+        os.remove(temp_path)
+
+        if not text_result.strip():
+            return {"error": "OCR returned no confident text."}, 400
+
+        print("Final OCR Result:", text_result)
+        return {"text": text_result.strip()}, 200
 
     except Exception as e:
-        print(f"Error in processing OCR: {e}")
-        return {"error": "Failed to process the image. Please try again later."}, 500
+        traceback.print_exc()
+        return {"error": f"Error during OCR processing: {str(e)}"}, 500
