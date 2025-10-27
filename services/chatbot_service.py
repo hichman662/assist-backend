@@ -57,8 +57,8 @@ def generate_chat_response(prompt, max_length=150):
         clean_response = raw_response[len(prompt):].strip() if raw_response.startswith(prompt) else raw_response
 
         # Truncate the response to ensure brevity
-        if len(clean_response.split()) > 50:  # Arbitrary word limit
-            clean_response = " ".join(clean_response.split()[:50]) + "..."
+        if len(clean_response.split()) > 100:  # Arbitrary word limit
+            clean_response = " ".join(clean_response.split()[:100]) + "..."
 
         return {"response": clean_response}, 200
     except Exception as e:
