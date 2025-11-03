@@ -20,6 +20,9 @@ from app.routes.another_chat_model_routes import another_chat_model_ns
 from app.routes.another_image_processing_routes import another_image_processing_ns
 from app.routes.color_detection_routes import color_detection_ns
 from app.routes.geolocation_routes import geolocation_ns
+
+from app.routes.agent_routes import agent_ns
+
 #from app.routes.object_detection_routes import object_detection_ns
 
 # Import WebSocket handlers
@@ -47,6 +50,8 @@ api.add_namespace(another_chat_model_ns, path="/api/v1/another_chat_model")
 api.add_namespace(another_image_processing_ns, path="/api/v1/another_image_processing")
 api.add_namespace(color_detection_ns, path="/api/v1/color-detection")
 api.add_namespace(geolocation_ns, path="/api/v1/geolocation")
+api.add_namespace(agent_ns, path="/api/v1/agent")
+
 #api.add_namespace(object_detection_ns, path="/api/v1/object-detection")
 
 # WebSocket handler registration
