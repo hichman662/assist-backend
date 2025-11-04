@@ -40,12 +40,22 @@ INTENT_ROUTES = {
 },
 
     # ===== .NET  =====
-    "open_careplan": {
+     "get_care_activities_raw": {
         "target": "dotnet",
-        "path": "/CarePlan/ReadAll",
-        "speech": "Opening your care plan."
+        "path": "/IMCareActivity/ReadByTime",   
+        "action": "show_care_activities_raw",
+        "speech": "Fetching your care activities (raw)."
     },
-
+ # ===== RAG (explain raw data using KB) =====
+    # .NET → (payload params as query) → RAG explanation → FE
+    "get_care_activities_explained": {
+        "target": "rag",
+        "action": "show_care_activities_explained",
+        "speech": "Resumiendo tus actividades de cuidado.",
+        "source_path": "/IMCareActivity/ReadByTime",  # .NET endpoint
+        "source_method": "GET",
+        "lang": "es"
+    },
     # ===== Python AI  =====
     
 

@@ -13,4 +13,9 @@ numpy==1.24.4  # Pin to an older version compatible with imgaug
 scikit-learn
 ultralytics
 joblib
+requests
+python-dotenv
+sentence-transformers
+chromadb
+
 
