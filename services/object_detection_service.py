@@ -4,7 +4,7 @@ import cv2
 from ultralytics import YOLO
 
 class ObjectDetectionService:
-    model_path = "models/yolov8n.pt"  # Path to YOLO model
+    model_path = "models/yolo11n.pt"  # Path to YOLO model
     model = YOLO(model_path)  # Load the YOLO model
 
     @staticmethod

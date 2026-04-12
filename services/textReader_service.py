@@ -44,13 +44,25 @@ def process_text_image(image_file, ocr_type='ocr'):
 
         processed_img = preprocess_image_for_ocr(image)
 
-        data = pytesseract.image_to_data(processed_img, output_type=pytesseract.Output.DICT)
+        data = pytesseract.image_to_data(
+            processed_img,
+            lang='eng',
+            output_type=pytesseract.Output.DICT
+        )
+
         lines = defaultdict(list)
 
         for i in range(len(data['text'])):
-            if int(data['conf'][i]) > 60 and data['text'][i].strip():
+            text = data['text'][i].strip()
+
+            try:
+                conf = float(data['conf'][i])
+            except:
+                conf = -1
+
+            if conf > 60 and text:
                 line_no = data['line_num'][i]
-                lines[line_no].append(data['text'][i])
+                lines[line_no].append(text)
 
         text_result = '\n'.join([' '.join(words) for _, words in sorted(lines.items())])
 
